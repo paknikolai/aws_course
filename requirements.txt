@@ -1,0 +1,3 @@
+flask
+ec2-metadata
+setuptools
