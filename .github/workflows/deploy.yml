@@ -31,3 +31,13 @@ jobs:
     - name: Test the app
       run: |
         curl http://localhost:8080
+
+    - name: Create ZIP archive
+      run: |
+        zip -r webapp.zip webapp shared requirements.txt setup.py
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: webapp-archive
+        path: webapp.zip
