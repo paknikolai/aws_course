@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 
 app = Flask(__name__)
 
@@ -13,6 +13,11 @@ def get_region():
 def index():
     message = get_region()
     return render_template("index.html", message=message)
+
+@app.route("/health")
+def health_check():
+    """Endpoint for health checks."""
+    return jsonify({"status": get_region()}), 200
 
 
 if __name__ == "__main__":
