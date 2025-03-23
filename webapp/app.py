@@ -5,7 +5,7 @@ app = Flask(__name__)
 def get_region():
     try:
         from ec2_metadata import ec2_metadata
-        return ec2_metadata.region
+        return f"region: {ec2_metadata.region} AZ: {ec2_metadata.availability_zone}"
     except Exception as e:
         return "can't get region because of " + repr(e)
 
