@@ -9,9 +9,9 @@ BUCKET_NAME = 'web-site-pak-nikolai'
 def get_metadata(image_name):
     try:
         response = s3.head_object(Bucket=BUCKET_NAME, Key=image_name)
-        return response['Metadata']
+        return response#['Metadata']
     except s3.exceptions.NoSuchKey:
-        return None
+        return f"{image_name} not found in bucket {BUCKET_NAME}" #None
 
 @app.route('/download/<image_name>', methods=['GET'])
 def download_image(image_name):
