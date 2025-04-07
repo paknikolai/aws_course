@@ -1,3 +1,4 @@
 flask
 ec2-metadata
 setuptools
+boto3
