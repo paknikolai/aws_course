@@ -17,7 +17,7 @@ def get_metadata(image_name):
 def download_image(image_name):
     try:
         response = s3.get_object(Bucket=BUCKET_NAME, Key=image_name)
-        return send_file(response['Body'].read(), as_attachment=True, download_name=image_name)
+        return send_file(response['Body'], as_attachment=True, download_name=image_name)
     except s3.exceptions.NoSuchKey:
         return "Image not found", 404
 
