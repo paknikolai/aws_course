@@ -2,3 +2,4 @@ flask
 ec2-metadata
 setuptools
 boto3
+pymysql

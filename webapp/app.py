@@ -1,10 +1,15 @@
 from flask import Flask, render_template, jsonify, request, send_file
 import boto3
 from botocore.exceptions import NoCredentialsError
+import pymysql
+import argparse
 
 app = Flask(__name__)
 s3 = boto3.client('s3')
 BUCKET_NAME = 'web-site-pak-nikolai'
+
+session = boto3.session.Session()
+db_info = {}
 
 def get_metadata(image_name):
     try:
@@ -39,6 +44,7 @@ def upload_image():
     
     try:
         s3.upload_fileobj(file, BUCKET_NAME, file.filename)
+        add_metadata_to_db(file.filename)
         return "File uploaded successfully", 200
     except NoCredentialsError:
         return "AWS credentials not found", 403
@@ -68,6 +74,65 @@ def health_check():
     """Endpoint for health checks."""
     return jsonify({"status": get_region()}), 200
 
+def add_metadata_to_db(filename):
+    db_host = db_info["db_host"]
+    db_user = db_info["db_user"]
+    db_password = db_info["db_password"]
+    db_name = db_info["db_name"]
+
+    connection = pymysql.connect(
+        host=db_host,
+        user=db_user,
+        password=db_password,
+        database=db_name,
+        cursorclass=pymysql.cursors.DictCursor
+    )
+
+    with connection:
+        with connection.cursor() as cursor:
+            # Create table (if needed)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS images (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    filename VARCHAR(255),
+                )
+            """)
+            # Insert data
+            cursor.execute("INSERT INTO images (filename) VALUES (%s)", (filename,))
+            connection.commit()
+
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--db_host",
+        required=True,
+        help="db_host"
+    )
+
+    parser.add_argument(
+        "--db_user",
+        required=True,
+        help="db_user"
+    )
+
+    parser.add_argument(
+        "--db_password",
+        required=True,
+        help="db_password"
+    )
+
+    parser.add_argument(
+        "--db_name",
+        required=True,
+        help="db_name"
+    )
+    return parser.parse_args()
 
 if __name__ == "__main__":
+    args = get_arguments()
+    db_info["db_host"] = args.db_host
+    db_info["db_user"] = args.db_user
+    db_info["db_password"] = args.db_password
+    db_info["db_name"] = args.db_name
+
     app.run(host="0.0.0.0", port=8080)
