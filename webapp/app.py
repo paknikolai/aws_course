@@ -98,9 +98,6 @@ def add_metadata_to_db(metadata):
         with connection.cursor() as cursor:
             # Create table (if needed)
             cursor.execute("""
-                DROP TABLE  images
-            """)
-            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS images (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     file_name VARCHAR(255),
@@ -158,4 +155,4 @@ if __name__ == "__main__":
     conn.cursor().execute(f'CREATE DATABASE IF NOT EXISTS {db_info["db_name"]}')
 
     app.run(host="0.0.0.0", port=8080)
-    # python3 app.py  --db_user admin --db_password password --db_name images --db_host database.c3yeosk6ivcl.eu-north-1.rds.amazonaws.com
+    # python3 app.py  --db_user  --db_password  --db_name images --db_host 
