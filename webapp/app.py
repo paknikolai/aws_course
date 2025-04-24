@@ -4,6 +4,8 @@ from botocore.exceptions import NoCredentialsError
 import pymysql
 import argparse
 import os
+from  messageg import *
+
 
 app = Flask(__name__)
 s3 = boto3.client('s3')
@@ -51,6 +53,8 @@ def upload_image():
     try:
         s3.upload_fileobj(file, BUCKET_NAME, file.filename)
         add_metadata_to_db(get_metadata(file.filename))
+
+        publish_image_upload_notification(BUCKET_NAME, file.filename)
         return "File uploaded successfully", 200
     except NoCredentialsError:
         return "AWS credentials not found", 403
@@ -80,6 +84,23 @@ def health_check():
     """Endpoint for health checks."""
     return jsonify({"status": get_region()}), 200
 
+@app.route('/subscribe', methods=['GET'])
+def subscribe():
+    email = request.args.get('email')
+    if email:
+        success, message = subscribe_email(email)
+        return jsonify({'success': success, 'message': message})
+    return jsonify({'success': False, 'message': 'Email address is required.'})
+
+@app.route('/unsubscribe', methods=['GET'])
+def unsubscribe():
+    email = request.args.get('email')
+    if email:
+        success, message = unsubscribe_email(email)
+        return jsonify({'success': success, 'message': message})
+    return jsonify({'success': False, 'message': 'Email address is required.'})
+
+
 def add_metadata_to_db(metadata):
     db_host = db_info["db_host"]
     db_user = db_info["db_user"]
@@ -97,6 +118,9 @@ def add_metadata_to_db(metadata):
     with connection:
         with connection.cursor() as cursor:
             # Create table (if needed)
+            cursor.execute("""
+                DROP TABLE  images
+            """)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS images (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -138,7 +162,22 @@ def get_arguments():
         required=True,
         help="db_name"
     )
+
+    parser.add_argument(
+        "--sqs_queue_url",
+        required=True,
+        help="sqs_queue_url"
+    )
+
+    parser.add_argument(
+        "--sns_topic_arn",
+        required=True,
+        help="sns_topic_arn"
+    )
+
     return parser.parse_args()
+
+
 
 if __name__ == "__main__":
     args = get_arguments()
@@ -153,6 +192,10 @@ if __name__ == "__main__":
                        password=db_info["db_password"])
 
     conn.cursor().execute(f'CREATE DATABASE IF NOT EXISTS {db_info["db_name"]}')
+
+
+    sns_info["SQS_QUEUE_URL"] = args.sqs_queue_url
+    sns_info["SNS_TOPIC_ARN"] = args.sns_topic_arn
 
     app.run(host="0.0.0.0", port=8080)
     # python3 app.py  --db_user  --db_password  --db_name images --db_host 
