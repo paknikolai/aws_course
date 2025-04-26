@@ -4,8 +4,9 @@ from botocore.exceptions import NoCredentialsError
 import pymysql
 import argparse
 import os
-from  messageg import *
-
+from  aws_course.messages import *
+import time
+import threading
 
 app = Flask(__name__)
 s3 = boto3.client('s3')
@@ -42,6 +43,20 @@ def show_metadata(image_name):
     else:
         return "Image not found", 404
 
+def generate_presigned_url(object_key, expiration=3600):
+    try:
+        s3_client = boto3.client('s3', config=Config(signature_version='s3v4', region_name='eu-north-1'))
+        response = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': BUCKET_NAME, 'Key': object_key},
+            ExpiresIn=expiration
+        )
+    except Exception as e:
+        print(f"Error generating pre-signed URL: {e}")
+        return None
+
+    return response
+
 @app.route('/upload', methods=['POST'])
 def upload_image():
     if 'file' not in request.files:
@@ -53,8 +68,11 @@ def upload_image():
     try:
         s3.upload_fileobj(file, BUCKET_NAME, file.filename)
         add_metadata_to_db(get_metadata(file.filename))
+        info = {"name": file.filename,
+                "link": generate_presigned_url(file.filename),
+                "metadata": get_metadata(file.filename)}
 
-        publish_image_upload_notification(BUCKET_NAME, file.filename)
+        publish_image_upload_notification(BUCKET_NAME, info)
         return "File uploaded successfully", 200
     except NoCredentialsError:
         return "AWS credentials not found", 403
@@ -177,7 +195,11 @@ def get_arguments():
 
     return parser.parse_args()
 
-
+def background_task():
+    while True:
+        print("Running background task...")
+        process_sqs_messages()
+        time.sleep(5)
 
 if __name__ == "__main__":
     args = get_arguments()
@@ -197,5 +219,9 @@ if __name__ == "__main__":
     sns_info["SQS_QUEUE_URL"] = args.sqs_queue_url
     sns_info["SNS_TOPIC_ARN"] = args.sns_topic_arn
 
+    background_thread = threading.Thread(target=background_task, daemon=True)
+    background_thread.start()
+
     app.run(host="0.0.0.0", port=8080)
     # python3 app.py  --db_user  --db_password  --db_name images --db_host 
+    #python3 app.py --sqs_queue_url "" --sns_topic_arn ""

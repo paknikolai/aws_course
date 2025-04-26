@@ -1,10 +1,15 @@
 import boto3
 import json
 
-sqs = boto3.client('sqs')
-sns = boto3.client('sns')
-s3 = boto3.client('s3')
+from botocore.config import Config
 
+config = Config(
+    region_name = 'eu-north-1'
+)
+
+sqs = boto3.client('sqs', config=config)
+sns = boto3.client('sns', config=config)
+s3 = boto3.client('s3')
 
 sns_info = {}
 
@@ -42,15 +47,13 @@ def unsubscribe_email(email):
         print(f"Error unsubscribing {email}: {e}")
         return False, f"Error unsubscribing: {e}"
 
-def publish_image_upload_notification(bucket_name, key):
+def publish_image_upload_notification(bucket_name, info):
     try:
-        
-        download_link = "link"
-
         message = {
             'event': 'image_uploaded',
-            'download_link': download_link
+            'info': info
         }
+        key = info["name"]
 
         sqs.send_message(
             QueueUrl=sns_info["SQS_QUEUE_URL"],
@@ -74,12 +77,10 @@ def process_sqs_messages():
             try:
                 body = json.loads(message['Body'])
                 if body.get('event') == 'image_uploaded':
-                    image_name = body['name']
-                    # image_size = body['size']
-                    # image_extension = body['extension']
-                    # download_link = body['download_link']
+                    info = body['info']
+                    image_name = info["name"]
 
-                    sns_message = "message"
+                    sns_message = json.dumps(info, default=str)
 
                     sns.publish(
                         TopicArn=sns_info["SNS_TOPIC_ARN"],
