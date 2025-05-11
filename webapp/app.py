@@ -219,8 +219,8 @@ if __name__ == "__main__":
     sns_info["SQS_QUEUE_URL"] = args.sqs_queue_url
     sns_info["SNS_TOPIC_ARN"] = args.sns_topic_arn
 
-    background_thread = threading.Thread(target=background_task, daemon=True)
-    background_thread.start()
+    #background_thread = threading.Thread(target=background_task, daemon=True)
+    #background_thread.start()
 
     app.run(host="0.0.0.0", port=8080)
     # python3 app.py  --db_user  --db_password  --db_name images --db_host 
