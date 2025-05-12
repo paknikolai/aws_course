@@ -4,7 +4,7 @@ from botocore.exceptions import NoCredentialsError
 import pymysql
 import argparse
 import os
-from  aws_course.messages import *
+from  messages import *
 import time
 import threading
 
@@ -19,7 +19,7 @@ def get_metadata(image_name):
     try:
         response = s3.head_object(Bucket=BUCKET_NAME, Key=image_name)
         metadata = {}
-        metadata["last_modified"] = response['LastModified']
+        metadata["last_modified"] = str(response['LastModified'])
         metadata["file_size"] = response['ContentLength']
         metadata["file_extension"] = os.path.splitext(image_name)[1]
         metadata["file_name"] = image_name
@@ -136,9 +136,6 @@ def add_metadata_to_db(metadata):
     with connection:
         with connection.cursor() as cursor:
             # Create table (if needed)
-            cursor.execute("""
-                DROP TABLE  images
-            """)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS images (
                     id INT AUTO_INCREMENT PRIMARY KEY,
