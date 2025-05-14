@@ -15,6 +15,23 @@ BUCKET_NAME = 'web-site-pak-nikolai'
 session = boto3.session.Session()
 db_info = {}
 
+LAMBDA_FUNCTION_NAME = 'web-app-DataConsistencyFunction'
+lambda_client = boto3.client('lambda', region_name=config.region_name)
+
+@app.route('/check_data_consistency', methods=['GET'])
+def check_data_consistency():
+    try:
+        response = lambda_client.invoke(
+            FunctionName=LAMBDA_FUNCTION_NAME,
+            InvocationType='RequestResponse',
+            Payload=json.dumps({'detail-type': 'web_application'})
+        )
+        payload = json.loads(response['Payload'].read().decode('utf-8'))
+        return jsonify(payload), response['StatusCode']
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 def get_metadata(image_name):
     try:
         response = s3.head_object(Bucket=BUCKET_NAME, Key=image_name)
@@ -221,4 +238,4 @@ if __name__ == "__main__":
 
     app.run(host="0.0.0.0", port=8080)
     # python3 app.py  --db_user  --db_password  --db_name images --db_host 
-    #python3 app.py --sqs_queue_url "" --sns_topic_arn ""
+    #python3 app.py --sqs_queue_url "" --sns_topic_arn "" --db_user  --db_password  --db_name images --db_host 
